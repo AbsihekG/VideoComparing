@@ -2,44 +2,40 @@ import cv2
 import numpy as np
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import time
 import os
 import random
+import pytest
 
+@pytest.fixture
+def driver():
+    # Set Chrome options with headless false and a timeout of 10 seconds
+    chrome_options = Options()
+    chrome_options.headless = False
+    chrome_options.add_argument('--start-maximized')
+    chrome_options.add_argument('--window-size=1600,1200')
+    chrome_options.add_argument('--use-fake-ui-for-media-stream')
+    chrome_options.add_argument('--use-fake-device-for-media-stream')
+    chrome_options.add_argument('--use-file-for-fake-video-capture=/Users/digitalsupplier/videoy4m.y4m')
+    prefs = {"profile.default_content_setting_values.notifications": 1}
+    chrome_options.add_experimental_option("prefs", prefs)
+    # Start the webdriver with the Chrome options
+    driver = webdriver.Chrome(options=chrome_options)
 
+    # Set the timeout for the webdriver to 30 seconds
+    driver.set_page_load_timeout(500000)
+    yield driver
+    # Quit the webdriver
+    driver.quit()
 
-# Set Chrome options with headless false and a timeout of 10 seconds
-chrome_options = Options()
-chrome_options.headless = False
-chrome_options.add_argument('--start-maximized')
-chrome_options.add_argument('--window-size=1600,1200')
-chrome_options.add_argument('--use-fake-ui-for-media-stream')
-chrome_options.add_argument('--use-fake-device-for-media-stream')
-chrome_options.add_argument('--use-file-for-fake-video-capture=/Users/digitalsupplier/videoy4m.y4m')
-prefs = {"profile.default_content_setting_values.notifications": 1}
-chrome_options.add_experimental_option("prefs", prefs)
-# Start the webdriver with the Chrome options
-driver = webdriver.Chrome(options=chrome_options)
-
-
-# Set the timeout for the webdriver to 30 seconds
-driver.set_page_load_timeout(500000)
-wait = WebDriverWait(driver, 800)
-
-window_handles = driver.window_handles
-if len(window_handles) > 1:
-    driver.switch_to.window(window_handles[1])
-
-try:
-
+def test_video_comparison(driver):
     # Navigate to the webpage
     driver.get('https://www.hippovideo.io/video-templates/record/744531/one_card_video_flow_001?api_key=5EY0i8mD46BMmohMPWiNRgtt&email=deepa%2Btestingtemplatebuilder%40hippovideo.io')
     print("!!!!!!!!!!!!!!!!!!")
+    wait = WebDriverWait(driver, 800)
     wait.until(EC.presence_of_element_located((By.XPATH, "//div[@id='vfSlide-1']//div[@class='vf-card-list__card']/img[@alt='Camera Only']")))
     #time.sleep(5)
     firstcardWebcamRecord = driver.find_element(By.XPATH,"//div[@id='vfSlide-1']//div[@class='vf-card-list__card']/img[@alt='Camera Only']") 
@@ -52,7 +48,7 @@ try:
     print('mirror webcam applied')
     time.sleep(3)
 
-    startrecordingbtn = driver.find_element(By.XPATH, '//*[@id="hvRecorderSdkContainer"]/div[1]/div[2]/div[2]/div[2]/div')
+    startrecordingbtn = driver.find_element(By.XPATH, '//*[@id="hvRecorderSdkContainer"]/div[1]/div[3]/div[2]/div[2]/div/div')
     startrecordingbtn.click()
     print("######################")
     time.sleep(13)
@@ -71,13 +67,12 @@ try:
 
     print('Preview src = ' + previewvideourl)
     print("preview video src getted")
-   
+
     #getting preview video path 
     asset_folder_path = os.path.abspath('/Users/digitalsupplier/VideoComparingTest')
     subfolder = 'Asset'  
     video_filename = 'vbgvideoflow.mp4'  
     video_file_path = os.path.join(asset_folder_path, subfolder, video_filename)
-  
 
     video1 = cv2.VideoCapture(video_file_path)
     print('original video getted')
@@ -88,7 +83,7 @@ try:
     ret2, frame2 = cv2.VideoCapture(previewvideourl).read()
     print('video two captured and readed')
 
-     #if not ret1 or not ret2:
+    #if not ret1 or not ret2:
         #break
     # resize the frames to the same size
     frame1 = cv2.resize(frame1, (640, 480))
@@ -106,8 +101,8 @@ try:
         print("both videos are same")
 
     else:
-        print("preview is  differnt")
-        raise AssertionError("video are different")
+        print("preview is different")
+        raise AssertionError("video is different")
 
     save_and_nextbtn = driver.find_element(By.XPATH, "//div[@class='vf-slide-bottom__options']//button")
     save_and_nextbtn.click()
@@ -125,20 +120,18 @@ try:
     videoflow_video_tile = VideoName_text_area.get_attribute("value")
     print(videoflow_video_tile)
 
-
     save_nextbtn = driver.find_element(By.XPATH, "//div[@class='sidebar-inner__footer']//button")
     save_nextbtn.click()
 
     wait.until(EC.presence_of_element_located((By.ID, "footerSettingsSaveText")))
     salespage_save_and_next_btn = driver.find_element(By.ID, "footerSettingsSaveText")
     salespage_save_and_next_btn.click()
-    
+
     wait.until(EC.presence_of_element_located((By.XPATH, "//a[@class='table_action_icon previewIcon']")))
     sharesPreviewbtn = driver.find_element(By.XPATH, "//a[@class='table_action_icon previewIcon']")
     sharesPreviewbtn.click()
     driver.switch_to.window(driver.window_handles[1])
 
-    
     #getting delivery video path 
     asset_folder_path = os.path.abspath('/Users/digitalsupplier/VideoComparingTest')
     subfolder = 'Asset'  
@@ -147,7 +140,7 @@ try:
     video4 = cv2.VideoCapture(delivery_video_file_path)
 
     wait.until(EC.presence_of_element_located((By.XPATH, "//video[@id='preview-video-player']")))
-    
+
     deliveryvideosrc = driver.find_element(By.XPATH, "//video[@id='preview-video-player']")
     deliveryvideourl  = deliveryvideosrc.get_attribute("src")
     print('delivery src = ' + deliveryvideourl)
@@ -155,10 +148,10 @@ try:
 
     ret3, frame3 = cv2.VideoCapture(deliveryvideourl).read()
     ret4, frame4 = video4.read() 
-    
+
     print('video two captured and readed')
 
-     #if not ret1 or not ret2:
+    #if not ret1 or not ret2:
         #break
     # resize the frames to the same size
     frame4 = cv2.resize(frame4, (640, 480))
@@ -174,14 +167,6 @@ try:
     # Press 'Esc' to exit
     if difference_percentage == 0.0:
         print("both videos are same")
-
     else:
-        print("videos are differnt")
+        print("videos are different")
         raise AssertionError("delivery video is different")
-
-finally:
- # Quit the webdriver
- driver.quit()
-    
-
-   
